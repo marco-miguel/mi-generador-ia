@@ -1,11 +1,8 @@
 import streamlit as st
 import os
-import requests
-import io
 from dotenv import load_dotenv
 from google import genai
 import re
-from PIL import Image
 
 # --- CONFIGURACIÓN Y CARGA DE API ---
 load_dotenv()
@@ -40,13 +37,11 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# --- INICIALIZAR MEMORIA ---
+# --- INICIALIZAR MEMORIA PARA EVITAR BORRADOS ---
 if "resultado_ia" not in st.session_state:
     st.session_state["resultado_ia"] = None
 if "ideas_ia" not in st.session_state:
     st.session_state["ideas_ia"] = None
-if "imagenes_generadas" not in st.session_state:
-    st.session_state["imagenes_generadas"] = {}
 
 # --- INTERFAZ ---
 st.markdown("<h1>GENERADOR IA</h1>", unsafe_allow_html=True)
@@ -101,13 +96,11 @@ if modo_app == "Generador de Video Completo":
                 """
                 try:
                     interaction = client.interactions.create(model="gemini-3.8-flash", input=prompt)
-                    # Guardamos en memoria y limpiamos imágenes anteriores
                     st.session_state["resultado_ia"] = interaction.output_text
-                    st.session_state["imagenes_generadas"] = {} 
                 except Exception as e:
                     st.error(f"Error: {e}")
 
-    # Si hay resultado en memoria, lo mostramos
+    # Mostrar resultado desde la memoria
     if st.session_state["resultado_ia"]:
         resultado = st.session_state["resultado_ia"]
         
@@ -138,26 +131,9 @@ if modo_app == "Generador de Video Completo":
         with tabs[2]: 
             texto_prompts = secciones.get("prompts","")
             bloques_prompts = re.split(r'(?=\*?\s*Prompt\s*\d+)', texto_prompts)
-            for idx, bloque in enumerate(bloques_prompts):
+            for bloque in bloques_prompts:
                 if bloque.strip():
                     st.code(bloque.strip(), language="text")
-                    
-                    if st.button(f"🎨 Generar Imagen {idx+1}", key=f"gen_img_{idx}"):
-                        with st.spinner("Generando imagen con Pollinations (esto puede tardar)..."):
-                            prompt_limpio = re.sub(r'(?i)Prompt \d+.*?:', '', bloque).strip()
-                            url = f"https://image.pollinations.ai/prompt/{requests.utils.quote(prompt_limpio)}?width=768&height=1344&nologo=true&model=flux"
-                            try:
-                                response = requests.get(url, timeout=60)
-                                if response.status_code == 200:
-                                    st.session_state["imagenes_generadas"][idx] = response.content
-                                else:
-                                    st.error("Servidor ocupado. Espera 15 segundos.")
-                            except Exception as e:
-                                st.error(f"Error: {e}")
-                                
-                    # Mostrar la imagen guardada (si ya se generó)
-                    if idx in st.session_state["imagenes_generadas"]:
-                        st.image(io.BytesIO(st.session_state["imagenes_generadas"][idx]), caption=f"Imagen {idx+1} (Guardada)", use_column_width=True)
                             
         with tabs[3]: 
             st.code(secciones.get("extras",""), language="text")
@@ -166,7 +142,7 @@ if modo_app == "Generador de Video Completo":
             st.code(secciones.get("descripcion",""), language="text")
             
         st.write("---")
-        # Descarga segura desde la memoria
+        # Botón de descarga limpio, sin que se cierre la app
         st.download_button(
             label="📥 Descargar Todo el Proyecto (.txt)",
             data=resultado,
@@ -203,7 +179,7 @@ elif modo_app == "Generador de Ideas por Nicho":
                     
     if st.session_state["ideas_ia"]:
         ideas = st.session_state["ideas_ia"]
-        st.success(f"✅ Ideas generadas. Copia el título que te guste.")
+        st.success(f"✅ Ideas generadas. Copia el título que te guste y pégalo en el generador de video.")
         bloques_ideas = re.split(r'(?=\d+\.\s)', ideas)
         for bloque in bloques_ideas:
             if bloque.strip():
