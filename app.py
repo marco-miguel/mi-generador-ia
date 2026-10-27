@@ -27,63 +27,15 @@ st.markdown("""
     h1 { color: #00ffff; text-shadow: 0 0 10px #00ffff, 0 0 20px #00ffff, 0 0 40px #00ffff; text-align: center; font-size: 3.5rem !important; margin-bottom: 0px; letter-spacing: 2px; }
     .subtitulo { text-align: center; color: #ff00ff; font-size: 1.2rem; text-shadow: 0 0 5px #ff00ff; margin-top: -10px; margin-bottom: 20px; letter-spacing: 1px; }
     h2, h3 { color: #ff00ff; text-shadow: 0 0 5px #ff00ff; }
-    
-    .stTextInput>div>div>input, .stSelectbox>div>div>select, .stTextArea textarea { 
-        background-color: #1a1a1a !important; color: #00ffff !important; border: 1px solid #ff00ff !important; border-radius: 5px; box-shadow: 0 0 5px #ff00ff inset; font-family: 'Courier New', Courier, monospace; 
-    }
-    
-    .stButton>button { 
-        background: linear-gradient(90deg, #ff00ff, #00ffff); color: #000000; font-weight: bold; border: none; border-radius: 5px; padding: 10px 24px; font-size: 1.2rem; box-shadow: 0 0 10px #ff00ff, 0 0 20px #00ffff; transition: all 0.3s ease; width: 100%; text-transform: uppercase; 
-    }
+    .stTextInput>div>div>input, .stSelectbox>div>div>select, .stTextArea textarea { background-color: #1a1a1a !important; color: #00ffff !important; border: 1px solid #ff00ff !important; border-radius: 5px; box-shadow: 0 0 5px #ff00ff inset; font-family: 'Courier New', Courier, monospace; }
+    .stButton>button { background: linear-gradient(90deg, #ff00ff, #00ffff); color: #000000; font-weight: bold; border: none; border-radius: 5px; padding: 10px 24px; font-size: 1.2rem; box-shadow: 0 0 10px #ff00ff, 0 0 20px #00ffff; transition: all 0.3s ease; width: 100%; text-transform: uppercase; }
     .stButton>button:hover { box-shadow: 0 0 20px #ff00ff, 0 0 40px #00ffff; transform: scale(1.02); }
-    
-    /* Pestañas */
     .stTabs [data-baseweb="tab-list"] { gap: 20px; background-color: #0d0f12; border-bottom: 2px solid #ff00ff; padding-bottom: 10px; }
     .stTabs [data-baseweb="tab"] { color: #e0e0e0; background-color: #1a1a1a; border: 1px solid #333; border-radius: 5px; padding: 10px 20px; }
     .stTabs [aria-selected="true"] { color: #00ffff !important; border: 1px solid #00ffff !important; box-shadow: 0 0 10px #00ffff; }
-    
-    /* Estilo normal para el bloque de código */
-    .stCodeBlock { 
-        background-color: #111 !important; 
-        border-left: 5px solid #00ffff; 
-        box-shadow: 0 0 15px rgba(0, 255, 255, 0.1); 
-        margin-bottom: 10px;
-        transition: all 0.5s ease;
-    }
+    .stCodeBlock { background-color: #111 !important; border-left: 5px solid #00ffff; box-shadow: 0 0 15px rgba(0, 255, 255, 0.1); margin-bottom: 15px; }
 </style>
 """, unsafe_allow_html=True)
-
-# --- FUNCIÓN PARA MOSTRAR BLOQUES CON BOTÓN DE COPIA Y COLOR ---
-def mostrar_bloque(texto, key_base):
-    # Si el texto está vacío, no mostramos nada
-    if not texto.strip():
-        return
-        
-    # Creamos una columna para el texto y otra para el botón
-    col1, col2 = st.columns([8.5, 1.5])
-    
-    with col1:
-        # Verificamos si este bloque ya fue copiado en la sesión
-        if st.session_state.get(f"copiado_{key_base}", False):
-            # Si ya se copió, aplicamos un estilo verde brillante
-            st.markdown(f"""
-            <div style="background-color: #0a2a1a; border-left: 5px solid #00ff00; padding: 10px; border-radius: 5px; color: #00ff00; font-family: 'Courier New', monospace; font-size: 14px; white-space: pre-wrap;">
-            {texto}
-            </div>
-            """, unsafe_allow_html=True)
-        else:
-            # Si no se ha copiado, mostramos el bloque normal
-            st.code(texto, language="text")
-            
-    with col2:
-        # Este es el botón que marca el bloque como copiado
-        if not st.session_state.get(f"copiado_{key_base}", False):
-            if st.button("📋 Marcar Copiado", key=f"btn_{key_base}"):
-                st.session_state[f"copiado_{key_base}"] = True
-                st.toast("¡Bloque marcado! Ahora usa Ctrl+C o el botón de copiar del recuadro.")
-                st.rerun()
-        else:
-            st.success("✅")
 
 # --- INTERFAZ ---
 st.markdown("<h1>GENERADOR IA</h1>", unsafe_allow_html=True)
@@ -124,11 +76,6 @@ if modo_app == "Generador de Video Completo":
         if not GEMINI_API_KEY:
             st.error("Falta la API Key.")
         else:
-            # Reseteamos los estados de copiado en cada nueva generación
-            for key in list(st.session_state.keys()):
-                if key.startswith("copiado_"):
-                    del st.session_state[key]
-                    
             with st.spinner("Calculando escenas y diseñando planos cinematográficos..."):
                 prompt = f"""
                 Eres un experto director de cine y creador de contenido. Devuelve un documento con estas 5 secciones exactas. 
@@ -174,32 +121,32 @@ if modo_app == "Generador de Video Completo":
                     if m_x: secciones["extras"] = m_x.group(1).strip()
                     if m_d: secciones["descripcion"] = m_d.group(1).strip()
 
-                    st.success("✅ Protocolo generado. Los bloques cambiarán a verde al marcarlos como copiados.")
+                    st.success("✅ Protocolo generado.")
                     
                     tabs = st.tabs(["📜 GUION", "🎬 ESCENAS", "🖼️ PROMPTS IMÁGENES", "💡 EXTRAS", "🏷️ DESCRIPCIÓN"])
                     
                     with tabs[0]: 
-                        mostrar_bloque(secciones.get("guion",""), "guion")
+                        st.code(secciones.get("guion",""), language="text")
                     
                     with tabs[1]:
                         texto_escenas = secciones.get("escenas","")
                         bloques_escenas = re.split(r'(?=\*?\s*Escena\s*\d+)', texto_escenas)
-                        for idx, bloque in enumerate(bloques_escenas):
+                        for bloque in bloques_escenas:
                             if bloque.strip():
-                                mostrar_bloque(bloque.strip(), f"escena_{idx}")
+                                st.code(bloque.strip(), language="text")
                                 
                     with tabs[2]: 
                         texto_prompts = secciones.get("prompts","")
                         bloques_prompts = re.split(r'(?=\*?\s*Prompt\s*\d+)', texto_prompts)
-                        for idx, bloque in enumerate(bloques_prompts):
+                        for bloque in bloques_prompts:
                             if bloque.strip():
-                                mostrar_bloque(bloque.strip(), f"prompt_{idx}")
+                                st.code(bloque.strip(), language="text")
                                 
                     with tabs[3]: 
-                        mostrar_bloque(secciones.get("extras",""), "extras")
+                        st.code(secciones.get("extras",""), language="text")
                     
                     with tabs[4]: 
-                        mostrar_bloque(secciones.get("descripcion",""), "descripcion")
+                        st.code(secciones.get("descripcion",""), language="text")
                         
                     st.write("---")
                     st.download_button(
@@ -213,10 +160,9 @@ if modo_app == "Generador de Video Completo":
                     st.error(f"Error: {e}")
 
 # ==========================================
-# MÓDULO 2: GENERADOR DE IDEAS POR NICHO
+# MÓDULO 2: GENERADOR DE IDEAS POR NICHO (CON BOTÓN INDIVIDUAL)
 # ==========================================
 elif modo_app == "Generador de Ideas por Nicho":
-    # (Este módulo se queda igual, pero podrías aplicarle la misma función mostrar_bloque si quisieras)
     col1, col2 = st.columns(2)
     with col1:
         nicho = st.text_input("► INGRESA TU NICHO:", "Finanzas personales para jóvenes")
@@ -228,17 +174,25 @@ elif modo_app == "Generador de Ideas por Nicho":
             st.error("Falta la API Key.")
         else:
             with st.spinner("Buscando ideas en el ciberespacio..."):
+                # Pedimos a la IA un formato estricto para poder separar los títulos
                 prompt_ideas = f"""
                 Actúa como estratega de contenido. Para el nicho "{nicho}", dame {cantidad} ideas de videos virales.
-                Para cada una, dame solo:
-                1. Un Título llamativo.
-                2. Una frase de Gancho (Hook) para los primeros 3 segundos.
-                Sé breve y directo. Formatea como una lista numerada.
+                REGLA ESTRICTA: Formatea la respuesta como una lista numerada. 
+                Usa exactamente este formato por cada idea:
+                "1. [Título llamativo] - Gancho: [Frase de gancho]"
                 """
                 try:
                     interaction = client.interactions.create(model="gemini-3.1-flash-lite", input=prompt_ideas)
                     ideas = interaction.output_text
-                    st.success(f"✅ {cantidad} ideas generadas.")
-                    mostrar_bloque(ideas, "ideas")
+                    st.success(f"✅ {cantidad} ideas generadas. Copia el título que te guste y pégalo arriba.")
+                    
+                    # Separamos las ideas por cada número (1., 2., 3., etc.)
+                    bloques_ideas = re.split(r'(?=\d+\.\s)', ideas)
+                    
+                    for idx, bloque in enumerate(bloques_ideas):
+                        if bloque.strip():
+                            # Mostramos cada idea en su propio bloque con botón de copiar
+                            st.code(bloque.strip(), language="text")
+                                
                 except Exception as e:
                     st.error(f"Error: {e}")
