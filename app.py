@@ -1,8 +1,12 @@
 import streamlit as st
 import os
+import requests
+import io
+import time
 from dotenv import load_dotenv
 from google import genai
 import re
+from PIL import Image
 
 # --- CONFIGURACIÓN Y CARGA DE API ---
 load_dotenv()
@@ -138,9 +142,41 @@ if modo_app == "Generador de Video Completo":
                     with tabs[2]: 
                         texto_prompts = secciones.get("prompts","")
                         bloques_prompts = re.split(r'(?=\*?\s*Prompt\s*\d+)', texto_prompts)
-                        for bloque in bloques_prompts:
+                        for idx, bloque in enumerate(bloques_prompts):
                             if bloque.strip():
+                                # 1. Mostramos el bloque para copiar
                                 st.code(bloque.strip(), language="text")
+                                
+                                # 2. Botón para generar la imagen
+                                if st.button(f"🎨 Generar Imagen para el Prompt {idx+1}", key=f"gen_img_{idx}"):
+                                    with st.spinner("Conectando con los servidores de Pollinations..."):
+                                        # Limpiamos el texto para que sea solo el prompt en inglés
+                                        prompt_limpio = re.sub(r'(?i)Prompt \d+.*?:', '', bloque).strip()
+                                        
+                                        # Hacemos la petición directa a la API gratuita (modelo Flux)
+                                        url = f"https://image.pollinations.ai/prompt/{requests.utils.quote(prompt_limpio)}?width=768&height=1344&nologo=true&model=flux"
+                                        
+                                        try:
+                                            # Esperamos hasta 60 segundos a que responda
+                                            response = requests.get(url, timeout=60)
+                                            if response.status_code == 200:
+                                                image = Image.open(io.BytesIO(response.content))
+                                                st.image(image, caption=f"Resultado para el Prompt {idx+1}", use_column_width=True)
+                                                
+                                                # Botón para descargar la imagen
+                                                img_bytes = io.BytesIO()
+                                                image.save(img_bytes, format="JPEG")
+                                                st.download_button(
+                                                    label="⬇️ Descargar Imagen",
+                                                    data=img_bytes.getvalue(),
+                                                    file_name=f"imagen_escena_{idx+1}.jpg",
+                                                    mime="image/jpeg",
+                                                    key=f"dl_img_{idx}"
+                                                )
+                                            else:
+                                                st.error("El servidor de Pollinations está ocupado. Intenta de nuevo en 15 segundos.")
+                                        except Exception as e:
+                                            st.error(f"Error de conexión: {e}")
                                 
                     with tabs[3]: 
                         st.code(secciones.get("extras",""), language="text")
@@ -160,7 +196,7 @@ if modo_app == "Generador de Video Completo":
                     st.error(f"Error: {e}")
 
 # ==========================================
-# MÓDULO 2: GENERADOR DE IDEAS POR NICHO (CON BOTÓN INDIVIDUAL)
+# MÓDULO 2: GENERADOR DE IDEAS POR NICHO
 # ==========================================
 elif modo_app == "Generador de Ideas por Nicho":
     col1, col2 = st.columns(2)
@@ -174,7 +210,6 @@ elif modo_app == "Generador de Ideas por Nicho":
             st.error("Falta la API Key.")
         else:
             with st.spinner("Buscando ideas en el ciberespacio..."):
-                # Pedimos a la IA un formato estricto para poder separar los títulos
                 prompt_ideas = f"""
                 Actúa como estratega de contenido. Para el nicho "{nicho}", dame {cantidad} ideas de videos virales.
                 REGLA ESTRICTA: Formatea la respuesta como una lista numerada. 
@@ -184,14 +219,11 @@ elif modo_app == "Generador de Ideas por Nicho":
                 try:
                     interaction = client.interactions.create(model="gemini-3.1-flash-lite", input=prompt_ideas)
                     ideas = interaction.output_text
-                    st.success(f"✅ {cantidad} ideas generadas. Copia el título que te guste y pégalo arriba.")
+                    st.success(f"✅ {cantidad} ideas generadas. Copia el título que te guste.")
                     
-                    # Separamos las ideas por cada número (1., 2., 3., etc.)
                     bloques_ideas = re.split(r'(?=\d+\.\s)', ideas)
-                    
-                    for idx, bloque in enumerate(bloques_ideas):
+                    for bloque in bloques_ideas:
                         if bloque.strip():
-                            # Mostramos cada idea en su propio bloque con botón de copiar
                             st.code(bloque.strip(), language="text")
                                 
                 except Exception as e:
